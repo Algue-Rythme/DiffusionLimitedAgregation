@@ -1,0 +1,1 @@
+make && mpiexec -n $1 bin/dla "${@:2}"
