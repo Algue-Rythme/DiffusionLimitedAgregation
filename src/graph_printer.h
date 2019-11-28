@@ -4,26 +4,60 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <boost/filesystem.hpp>
+#include <boost/mpi.hpp>
+#include <boost/serialization/vector.hpp>
+
+extern const int printer_rank;
+
+template<typename T>
+void print_vector(std::ofstream& file, std::vector<T> const& v) {
+    for (int id = 0; id < (int)v.size(); ++id) {
+        file << v[id];
+        if (id+1 == (int)v.size())
+            file << "\n";
+        else
+            file << ", ";
+    }
+}
 
 class Graph {
     public:
     Graph() = default;
 
     struct Edge {
+        Edge() = default;
         Edge(int, int);
 
         int start;
         int end;
     };
 
+    void add_edge(Edge const&);
+    int add_node();
+
     typedef std::vector<float> Features;
     typedef std::vector<int> Labels;
 
-    private:
+    int num_nodes;
     std::vector<Edge> edges;
     std::vector<Features> features;
     std::vector<Labels> labels;
 };
+
+template<typename Archive>
+void serialize(Archive& ar, Graph::Edge& edge, unsigned int version) {
+    ar & edge.start;
+    ar & edge.end;
+}
+
+template<typename Archive>
+void serialize(Archive& ar, Graph& graph, unsigned int version) {
+    ar & graph.num_nodes;
+    ar & graph.edges;
+    ar & graph.features;
+    ar & graph.labels;
+}
 
 class GraphPrinter {
     public:
@@ -34,13 +68,14 @@ class GraphPrinter {
     GraphPrinter& operator<<(Graph const&);
 
     void close();
+    int num_graphs() const;
 
     private:
-    void create_directory();
-    void print_indicator();
-    void print_adj();
-    void print_node_labels();
-    void print_node_features();
+    boost::filesystem::path create_directory();
+    void print_indicator(Graph const& graph);
+    void print_adj(Graph const& graph);
+    void print_node_labels(Graph const& graph);
+    void print_node_features(Graph const& graph);
 
     std::string m_name;
     std::ofstream m_indicator_file;
@@ -48,9 +83,10 @@ class GraphPrinter {
     std::ofstream m_node_labels_file;
     std::ofstream m_node_features_file;
     int m_offset;
+    int m_graph_id;
 };
 
 
-void print_graphs();
+void print_graphs(boost::mpi::communicator const&, GraphPrinter&);
 
 #endif
