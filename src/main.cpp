@@ -21,18 +21,11 @@ int main(int argc, char *argv[])
   DLA_params params(argc-2, argv+2);
   cout << params;
 
+  GraphPrinter graph_printer(string("DLA"), false, false);
   if (world.rank() == printer_rank) {
-    GraphPrinter graph_printer("DLA", false, false);
-    for (int graph_id = 0; ; ++graph_id) {
-      if (graph_id < graph_per_process)
-        produce_graph(world, params);
-      print_graphs(world, graph_printer);
-      if (graph_printer.num_graphs() >= total_num_graphs)
-        break ;
-    }
-  } else {
-    for (int graph_id = 0; graph_id < graph_per_process; ++graph_id) {
-        produce_graph(world, params);
-    }
+    graph_printer.open();
+  }
+  for (int graph_id = 0; graph_id < graph_per_process; ++graph_id) {
+    produce_graph(world, graph_printer, params);
   }
 }

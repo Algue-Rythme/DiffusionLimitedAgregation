@@ -23,7 +23,7 @@ void print_vector(std::ofstream& file, std::vector<T> const& v) {
 
 class Graph {
     public:
-    Graph() = default;
+    Graph();
 
     struct Edge {
         Edge() = default;
@@ -65,6 +65,8 @@ class GraphPrinter {
     GraphPrinter(GraphPrinter const&) = delete;
     GraphPrinter& operator=(GraphPrinter const&) = delete;
 
+    void open();
+
     GraphPrinter& operator<<(Graph const&);
 
     void close();
@@ -84,9 +86,10 @@ class GraphPrinter {
     std::ofstream m_node_features_file;
     int m_offset;
     int m_graph_id;
+    bool m_has_node_labels;
+    bool m_has_node_features;
 };
 
-
-void print_graphs(boost::mpi::communicator const&, GraphPrinter&);
+void print_graphs(GraphPrinter& graph_printer, std::vector<Graph> const& graphs);
 
 #endif

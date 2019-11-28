@@ -1,14 +1,16 @@
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <random>
 #include <string>
+#include <vector>
 #include "dla.h"
 #include "graph_printer.h"
 
 using namespace std;
 namespace mpi = boost::mpi;
 
-const int default_tag = 0;
+const int default_tag = 42;
 const DLA_Graph::Particle DLA_Graph::m_center{0., 0.};
 const int seed = 577;
 default_random_engine rgen(seed);
@@ -22,27 +24,33 @@ DLA_params::DLA_params(int num_args, char* args[]) {
 }
 
 int DLA_params::get_num_particles() const {
-    return 42;
+    return 500;
 }
 
 std::ostream& operator<<(std::ostream& out, DLA_params const&) {
     return out;
 }
 
-void produce_graph(boost::mpi::communicator const& com, DLA_params const& params) {
+void produce_graph(
+    boost::mpi::communicator const& com,
+    GraphPrinter& graph_printer,
+    DLA_params const& params) {
     DLA_Graph dla_graph;
     dla_graph.aggregate_particles(params.get_num_particles());
-    auto const& graph = dla_graph.get_graph();
-    com.isend(printer_rank, default_tag, graph);
+    auto graph = dla_graph.get_graph();
+    vector<Graph> graphs;
+    mpi::gather(com, graph, graphs, printer_rank);
+    if (com.rank() == printer_rank)
+        print_graphs(graph_printer, graphs);
 }
 
 DLA_Graph::DLA_Graph():
     m_particle_radius(1.),
-    m_spawn_radius(10.),
+    m_spawn_radius(200.),
     m_gaussian(0., 1.),
     m_particles{m_center} {}
 
-Graph const& DLA_Graph::get_graph() const {
+Graph DLA_Graph::get_graph() const {
     return m_graph;
 }
 
@@ -59,6 +67,7 @@ void DLA_Graph::aggregate_particle() {
         int neighbor_id = get_nearest_particle(particle);
         if (is_collision(m_particles[neighbor_id], particle)) {
             add_particle(neighbor_id, particle);
+            return ;
         }
     }
 }
@@ -70,14 +79,9 @@ void DLA_Graph::add_particle(int neighbor_id, Particle const& particle) {
 }
 
 DLA_Graph::Particle DLA_Graph::get_random_particle() const {
-    double x = m_gaussian(rgen);
-    double y = m_gaussian(rgen);
+    double x = m_spawn_radius;
+    double y = m_spawn_radius;
     Particle particle(x, y);
-    double dsquare = particles_square_distance(particle, m_center);
-    double d = sqrt(dsquare);
-    double norm = m_spawn_radius / d;
-    particle.x *= norm;
-    particle.y *= norm;
     return particle;
 }
 
@@ -96,10 +100,19 @@ int DLA_Graph::get_nearest_particle(Particle const& particle) const {
 
 void DLA_Graph::constrained_brownian_motion(Particle& particle) const {
     Particle candidate = particle;
-    do {
-        pure_brownian_motion(candidate);
-    } while(is_outside(candidate));
+    pure_brownian_motion(candidate);
+    // cout << candidate.x << " " << candidate.y << endl;
+    if (is_farther(candidate, particle)) {
+        candidate.x = 2 * particle.x - candidate.x;
+        candidate.y = 2 * particle.y - candidate.y;
+    }
     particle = candidate;
+}
+
+bool DLA_Graph::is_farther(Particle const& candidate, Particle const& ref_pos) const {
+    double dcand = particles_square_distance(candidate, m_center);
+    double dref = particles_square_distance(ref_pos, m_center);
+    return dcand > dref;
 }
 
 void DLA_Graph::pure_brownian_motion(Particle& particle) const {
@@ -116,7 +129,7 @@ bool DLA_Graph::is_outside(Particle const& particle) const {
 
 bool DLA_Graph::is_collision(Particle const& a, Particle const& b) const {
     double d = particles_square_distance(a, b);
-    return d <= m_particle_radius * m_particle_radius;
+    return d <= 4 * m_particle_radius * m_particle_radius;
 }
 
 double DLA_Graph::particles_square_distance(Particle const& a, Particle const& b) const {

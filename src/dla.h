@@ -24,9 +24,10 @@ class DLA_Graph {
     DLA_Graph();
 
     void aggregate_particles(int);
-    Graph const& get_graph() const;
+    Graph get_graph() const;
 
     struct Particle {
+        Particle() = default;
         Particle(double, double);
         double x;
         double y;
@@ -41,6 +42,7 @@ class DLA_Graph {
     void constrained_brownian_motion(Particle&) const;
     void pure_brownian_motion(Particle&) const;
     bool is_outside(Particle const&) const;
+    bool is_farther(Particle const&, Particle const&) const;
     int get_nearest_particle(Particle const&) const;
     void add_particle(int, Particle const& particle);
     bool is_collision(Particle const&, Particle const&) const;
@@ -53,6 +55,6 @@ class DLA_Graph {
     std::vector<Particle> m_particles;
 };
 
-void produce_graph(boost::mpi::communicator const&, DLA_params const& params);
+void produce_graph(boost::mpi::communicator const&, GraphPrinter&, DLA_params const& params);
 
 #endif
