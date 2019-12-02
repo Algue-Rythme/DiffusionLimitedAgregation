@@ -74,4 +74,6 @@ class DLA_Graph {
 
 void produce_graph(boost::mpi::communicator const&, GraphPrinter&, DLA_params const& params);
 
+extern std::default_random_engine rgen;
+
 #endif

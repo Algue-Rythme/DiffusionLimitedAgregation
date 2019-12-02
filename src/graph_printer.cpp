@@ -40,12 +40,12 @@ m_total_num_graphs(total_num_graphs) {}
 void GraphPrinter::open() {
     auto path = create_directory();
     m_indicator_file.open(path.string() + "_graph_indicator.txt");
-    m_adj_file.open(path.string() + "_graph_A.txt");
+    m_adj_file.open(path.string() + "_A.txt");
     m_graph_labels.open(path.string() + "_graph_labels.txt");
     if (m_has_node_labels)
         m_node_labels_file.open(path.string() + "_node_labels.txt");
     if (m_has_node_features)
-        m_node_features_file.open(path.string() + "_node_features.txt");
+        m_node_features_file.open(path.string() + "_node_attributes.txt");
     m_show_progress = make_unique<decltype(m_show_progress)::element_type>(m_total_num_graphs);
 }
 

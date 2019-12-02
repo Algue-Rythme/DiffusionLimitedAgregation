@@ -12,8 +12,7 @@ namespace mpi = boost::mpi;
 
 const int default_tag = 42;
 const DLA_Graph::Particle DLA_Graph::m_center{0., 0.};
-const int seed = 577;
-default_random_engine rgen(seed);
+default_random_engine rgen;
 
 DLA_Graph::Particle::Particle(double _x, double _y): x(_x), y(_y) {}
 
@@ -29,8 +28,7 @@ DLA_params::DLA_params(int rank, int num_args, char* args[]): m_rank(rank) {
     if (m_rank%2 == 0) {
         m_stick_prob = stod(params[4]);
         m_label = 2;
-    }
-    else {
+    } else {
         m_stick_prob = 1.;
         m_label = 1;
     }
@@ -74,7 +72,7 @@ void produce_graph(
     GraphPrinter& graph_printer,
     DLA_params const& params) {
     DLA_Graph dla_graph(params);
-    dla_graph.aggregate_particles(params.get_num_particles());
+    dla_graph.aggregate_particles(params.get_num_particles()-1);
     auto graph = dla_graph.get_graph();
     vector<Graph> graphs;
     mpi::gather(com, graph, graphs, printer_rank);
@@ -89,7 +87,10 @@ DLA_Graph::DLA_Graph(DLA_params const& params):
     m_label(params.get_label()),
     m_gaussian(0., params.get_gaussian_var()),
     m_unif(0., 1.),
-    m_particles{m_center} {}
+    m_particles{m_center} {
+        Graph::Features feature{0., 0.};
+        m_graph.add_node(feature);
+}
 
 Graph DLA_Graph::get_graph() const {
     return m_graph;

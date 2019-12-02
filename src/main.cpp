@@ -18,6 +18,8 @@ int main(int argc, char *argv[])
   total_num_graphs = graph_per_process * world.size();
 
   DLA_params params(world.rank(), argc-2, argv+2);
+  int seed = 577 + world.rank();
+  rgen.seed(seed);
 
   GraphPrinter graph_printer(string("DLA"), false, true, total_num_graphs);
   if (world.rank() == printer_rank) {
