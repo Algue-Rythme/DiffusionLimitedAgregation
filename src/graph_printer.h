@@ -7,6 +7,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/mpi.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/progress.hpp>
 
 extern const int printer_rank;
 
@@ -61,7 +62,7 @@ void serialize(Archive& ar, Graph& graph, unsigned int version) {
 
 class GraphPrinter {
     public:
-    GraphPrinter(std::string const&, bool, bool);
+    GraphPrinter(std::string const&, bool, bool, int);
     GraphPrinter(GraphPrinter const&) = delete;
     GraphPrinter& operator=(GraphPrinter const&) = delete;
 
@@ -88,6 +89,8 @@ class GraphPrinter {
     int m_graph_id;
     bool m_has_node_labels;
     bool m_has_node_features;
+    int m_total_num_graphs;
+    std::unique_ptr<boost::progress_display> m_show_progress;
 };
 
 void print_graphs(GraphPrinter& graph_printer, std::vector<Graph> const& graphs);

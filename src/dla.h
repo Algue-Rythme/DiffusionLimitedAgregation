@@ -12,8 +12,16 @@ class DLA_params {
     DLA_params(int, char* []);
 
     int get_num_particles() const;
+    double get_particle_radius() const;
+    double get_gaussian_var() const;
+    double get_spawn_radius() const;
 
     private:
+
+    int m_num_particles;
+    double m_particle_radius;
+    double m_gaussian_var;
+    double m_spawn_radius;
 };
 
 std::ostream& operator<<(std::ostream&, DLA_params const&);
@@ -21,7 +29,7 @@ std::ostream& operator<<(std::ostream&, DLA_params const&);
 class DLA_Graph {
     public:
 
-    DLA_Graph();
+    DLA_Graph(DLA_params const&);
 
     void aggregate_particles(int);
     Graph get_graph() const;

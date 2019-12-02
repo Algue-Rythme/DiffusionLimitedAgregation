@@ -23,9 +23,10 @@ int Graph::add_node() {
     return num_nodes-1;
 }
 
-GraphPrinter::GraphPrinter(std::string const& name, bool has_node_labels, bool has_node_features)
+GraphPrinter::GraphPrinter(std::string const& name, bool has_node_labels, bool has_node_features, int total_num_graphs)
 : m_name(name), m_offset(1), m_graph_id(1),
-m_has_node_labels(has_node_labels), m_has_node_features(has_node_features) {}
+m_has_node_labels(has_node_labels), m_has_node_features(has_node_features),
+m_total_num_graphs(total_num_graphs) {}
 
 void GraphPrinter::open() {
     auto path = create_directory();
@@ -35,6 +36,7 @@ void GraphPrinter::open() {
         m_node_labels_file.open(path.string() + "_node_labels.txt");
     if (m_has_node_features)
         m_node_features_file.open(path.string() + "_node_features.txt");
+    m_show_progress = make_unique<decltype(m_show_progress)::element_type>(m_total_num_graphs);
 }
 
 GraphPrinter& GraphPrinter::operator<<(Graph const& graph) {
@@ -44,6 +46,7 @@ GraphPrinter& GraphPrinter::operator<<(Graph const& graph) {
     print_node_features(graph);
     m_offset += graph.num_nodes;
     m_graph_id += 1;
+    ++(*m_show_progress);
     return *this;
 }
 
@@ -101,5 +104,4 @@ void print_graphs(GraphPrinter& graph_printer, vector<Graph> const& graphs) {
     for (auto const& graph : graphs) {
         graph_printer << graph;
     }
-    cout << graph_printer.num_graphs() << endl;
 }

@@ -21,10 +21,26 @@ DLA_params::DLA_params(int num_args, char* args[]) {
     vector<string> params;
     for (int i_arg = 0; i_arg < num_args; ++i_arg)
         params.emplace_back(args[i_arg]);
+    m_num_particles = stoi(params[0]);
+    m_particle_radius = stod(params[1]);
+    m_gaussian_var = stod(params[2]);
+    m_spawn_radius = stod(params[3]);
 }
 
 int DLA_params::get_num_particles() const {
-    return 500;
+    return m_num_particles;
+}
+
+double DLA_params::get_particle_radius() const {
+    return m_particle_radius;
+}
+
+double DLA_params::get_gaussian_var() const {
+    return m_gaussian_var;
+}
+
+double DLA_params::get_spawn_radius() const {
+    return m_spawn_radius;
 }
 
 std::ostream& operator<<(std::ostream& out, DLA_params const&) {
@@ -35,7 +51,7 @@ void produce_graph(
     boost::mpi::communicator const& com,
     GraphPrinter& graph_printer,
     DLA_params const& params) {
-    DLA_Graph dla_graph;
+    DLA_Graph dla_graph(params);
     dla_graph.aggregate_particles(params.get_num_particles());
     auto graph = dla_graph.get_graph();
     vector<Graph> graphs;
@@ -44,10 +60,10 @@ void produce_graph(
         print_graphs(graph_printer, graphs);
 }
 
-DLA_Graph::DLA_Graph():
-    m_particle_radius(1.),
-    m_spawn_radius(200.),
-    m_gaussian(0., 1.),
+DLA_Graph::DLA_Graph(DLA_params const& params):
+    m_particle_radius(params.get_particle_radius()),
+    m_spawn_radius(params.get_spawn_radius()),
+    m_gaussian(0., params.get_gaussian_var()),
     m_particles{m_center} {}
 
 Graph DLA_Graph::get_graph() const {
@@ -79,9 +95,13 @@ void DLA_Graph::add_particle(int neighbor_id, Particle const& particle) {
 }
 
 DLA_Graph::Particle DLA_Graph::get_random_particle() const {
-    double x = m_spawn_radius;
-    double y = m_spawn_radius;
+    double x = m_gaussian(rgen);
+    double y = m_gaussian(rgen);
     Particle particle(x, y);
+    double dsquare = particles_square_distance(particle, m_center);
+    double d = sqrt(dsquare);
+    particle.x *= (m_spawn_radius / d);
+    particle.y *= (m_spawn_radius / d);
     return particle;
 }
 
@@ -99,13 +119,12 @@ int DLA_Graph::get_nearest_particle(Particle const& particle) const {
 }
 
 void DLA_Graph::constrained_brownian_motion(Particle& particle) const {
-    Particle candidate = particle;
-    pure_brownian_motion(candidate);
-    // cout << candidate.x << " " << candidate.y << endl;
-    if (is_farther(candidate, particle)) {
-        candidate.x = 2 * particle.x - candidate.x;
-        candidate.y = 2 * particle.y - candidate.y;
-    }
+    Particle candidate;
+    do {
+        candidate = particle;
+        pure_brownian_motion(candidate);
+        //cout << candidate.x << " " << candidate.y << endl;
+    } while(is_outside(candidate));
     particle = candidate;
 }
 
