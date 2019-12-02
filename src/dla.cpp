@@ -17,14 +17,23 @@ default_random_engine rgen(seed);
 
 DLA_Graph::Particle::Particle(double _x, double _y): x(_x), y(_y) {}
 
-DLA_params::DLA_params(int num_args, char* args[]) {
+DLA_params::DLA_params(int rank, int num_args, char* args[]): m_rank(rank) {
     vector<string> params;
     for (int i_arg = 0; i_arg < num_args; ++i_arg)
         params.emplace_back(args[i_arg]);
+    assert(params.size() == 5);
     m_num_particles = stoi(params[0]);
     m_particle_radius = stod(params[1]);
     m_gaussian_var = stod(params[2]);
     m_spawn_radius = stod(params[3]);
+    if (m_rank%2 == 0) {
+        m_stick_prob = stod(params[4]);
+        m_label = 2;
+    }
+    else {
+        m_stick_prob = 1.;
+        m_label = 1;
+    }
 }
 
 int DLA_params::get_num_particles() const {
@@ -43,12 +52,25 @@ double DLA_params::get_spawn_radius() const {
     return m_spawn_radius;
 }
 
-std::ostream& operator<<(std::ostream& out, DLA_params const&) {
+double DLA_params::get_stick_prob() const {
+    return m_stick_prob;
+}
+
+int DLA_params::get_rank() const {
+    return m_rank;
+}
+
+int DLA_params::get_label() const {
+    return m_label;
+}
+
+std::ostream& operator<<(std::ostream& out, DLA_params const& params) {
+    out << "Rank=" << params.get_rank() << "\tstick_prob=" << params.get_stick_prob() << endl;
     return out;
 }
 
 void produce_graph(
-    boost::mpi::communicator const& com,
+    mpi::communicator const& com,
     GraphPrinter& graph_printer,
     DLA_params const& params) {
     DLA_Graph dla_graph(params);
@@ -63,7 +85,10 @@ void produce_graph(
 DLA_Graph::DLA_Graph(DLA_params const& params):
     m_particle_radius(params.get_particle_radius()),
     m_spawn_radius(params.get_spawn_radius()),
+    m_stick_prob(params.get_stick_prob()),
+    m_label(params.get_label()),
     m_gaussian(0., params.get_gaussian_var()),
+    m_unif(0., 1.),
     m_particles{m_center} {}
 
 Graph DLA_Graph::get_graph() const {
@@ -71,6 +96,7 @@ Graph DLA_Graph::get_graph() const {
 }
 
 void DLA_Graph::aggregate_particles(int num_particles) {
+    m_graph.set_label(m_label);
     for (int particle = 0; particle < num_particles; ++particle) {
         aggregate_particle();
     }
@@ -82,14 +108,18 @@ void DLA_Graph::aggregate_particle() {
         constrained_brownian_motion(particle);
         int neighbor_id = get_nearest_particle(particle);
         if (is_collision(m_particles[neighbor_id], particle)) {
+            double coin = m_unif(rgen);
+            if (coin > m_stick_prob)
+                continue ;
             add_particle(neighbor_id, particle);
-            return ;
+            break ;
         }
     }
 }
 
 void DLA_Graph::add_particle(int neighbor_id, Particle const& particle) {
-    int particle_id = m_graph.add_node();
+    Graph::Features feature{float(particle.x), float(particle.y)};
+    int particle_id = m_graph.add_node(feature);
     m_graph.add_edge(Graph::Edge(neighbor_id, particle_id));
     m_particles.push_back(particle);
 }
@@ -123,7 +153,6 @@ void DLA_Graph::constrained_brownian_motion(Particle& particle) const {
     do {
         candidate = particle;
         pure_brownian_motion(candidate);
-        //cout << candidate.x << " " << candidate.y << endl;
     } while(is_outside(candidate));
     particle = candidate;
 }

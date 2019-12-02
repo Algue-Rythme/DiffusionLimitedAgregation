@@ -17,11 +17,11 @@ int main(int argc, char *argv[])
   int graph_per_process = int(ceil(double(total_num_graphs) / double(world.size())));
   total_num_graphs = graph_per_process * world.size();
 
-  DLA_params params(argc-2, argv+2);
-  cout << params;
+  DLA_params params(world.rank(), argc-2, argv+2);
 
-  GraphPrinter graph_printer(string("DLA"), false, false, total_num_graphs);
+  GraphPrinter graph_printer(string("DLA"), false, true, total_num_graphs);
   if (world.rank() == printer_rank) {
+    cout << params;
     cout << "Producing " << total_num_graphs << " on " << world.size() << " processes" << endl;
     graph_printer.open();
   }

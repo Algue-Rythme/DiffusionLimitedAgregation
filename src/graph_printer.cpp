@@ -23,6 +23,15 @@ int Graph::add_node() {
     return num_nodes-1;
 }
 
+int Graph::add_node(Features const& feature) {
+    features.push_back(feature);
+    return add_node();
+}
+
+void Graph::set_label(int _label) {
+    label = _label;
+}
+
 GraphPrinter::GraphPrinter(std::string const& name, bool has_node_labels, bool has_node_features, int total_num_graphs)
 : m_name(name), m_offset(1), m_graph_id(1),
 m_has_node_labels(has_node_labels), m_has_node_features(has_node_features),
@@ -32,6 +41,7 @@ void GraphPrinter::open() {
     auto path = create_directory();
     m_indicator_file.open(path.string() + "_graph_indicator.txt");
     m_adj_file.open(path.string() + "_graph_A.txt");
+    m_graph_labels.open(path.string() + "_graph_labels.txt");
     if (m_has_node_labels)
         m_node_labels_file.open(path.string() + "_node_labels.txt");
     if (m_has_node_features)
@@ -44,6 +54,7 @@ GraphPrinter& GraphPrinter::operator<<(Graph const& graph) {
     print_adj(graph);
     print_node_labels(graph);
     print_node_features(graph);
+    m_graph_labels << graph.label << '\n';
     m_offset += graph.num_nodes;
     m_graph_id += 1;
     ++(*m_show_progress);
@@ -84,6 +95,7 @@ void GraphPrinter::print_node_features(Graph const& graph) {
 void GraphPrinter::close() {
     m_indicator_file.close();
     m_adj_file.close();
+    m_graph_labels.close();
     if (m_has_node_labels)
         m_node_labels_file.close();
     if (m_has_node_features)

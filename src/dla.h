@@ -9,19 +9,25 @@
 
 class DLA_params {
     public:
-    DLA_params(int, char* []);
+    DLA_params(int, int, char* []);
 
     int get_num_particles() const;
     double get_particle_radius() const;
     double get_gaussian_var() const;
     double get_spawn_radius() const;
+    double get_stick_prob() const;
+    int get_rank() const;
+    int get_label() const;
 
     private:
 
+    int m_rank;
     int m_num_particles;
     double m_particle_radius;
     double m_gaussian_var;
     double m_spawn_radius;
+    double m_stick_prob;
+    int m_label;
 };
 
 std::ostream& operator<<(std::ostream&, DLA_params const&);
@@ -58,7 +64,10 @@ class DLA_Graph {
 
     double m_particle_radius;
     double m_spawn_radius;
+    double m_stick_prob;
+    int m_label;
     mutable std::normal_distribution<double> m_gaussian;
+    mutable std::uniform_real_distribution<double> m_unif;
     Graph m_graph;
     std::vector<Particle> m_particles;
 };

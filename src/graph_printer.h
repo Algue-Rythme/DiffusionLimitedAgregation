@@ -34,16 +34,20 @@ class Graph {
         int end;
     };
 
-    void add_edge(Edge const&);
-    int add_node();
-
     typedef std::vector<float> Features;
     typedef std::vector<int> Labels;
+    
+    void add_edge(Edge const&);
+    int add_node();
+    int add_node(Features const&);
+
+    void set_label(int);
 
     int num_nodes;
     std::vector<Edge> edges;
     std::vector<Features> features;
     std::vector<Labels> labels;
+    int label;
 };
 
 template<typename Archive>
@@ -58,6 +62,7 @@ void serialize(Archive& ar, Graph& graph, unsigned int version) {
     ar & graph.edges;
     ar & graph.features;
     ar & graph.labels;
+    ar & graph.label;
 }
 
 class GraphPrinter {
@@ -83,6 +88,7 @@ class GraphPrinter {
     std::string m_name;
     std::ofstream m_indicator_file;
     std::ofstream m_adj_file;
+    std::ofstream m_graph_labels;
     std::ofstream m_node_labels_file;
     std::ofstream m_node_features_file;
     int m_offset;
